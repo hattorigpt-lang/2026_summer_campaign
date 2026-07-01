@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>One For All All For One キャンペーン in 沖縄 - 進捗マップ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght=400;600;700;800;900&family=Noto+Sans+JP:wght=400;500;700;900&display=swap');
+        
+        /* iOS特有のバウンス・はみ出しを徹底的に潰す */
+        html, body {
+            font-family: 'Noto Sans JP', 'Montserrat', sans-serif;
+            background: #0ea5e9;
+            color: #1e293b;
+            overflow: hidden !important;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            height: -webkit-fill-available; /* iOS Safariのバー対策 */
+            margin: 0; padding: 0;
+        }
+
+        .ocean-bg {
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 40%, #2dd4bf 100%) !important;
+            position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        @keyframes rotate-gradient {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .ring-spin-cyan::before {
+            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            background: conic-gradient(from 0deg, #06b6d4, #22d3ee, transparent, #06b6d4);
+            animation: rotate-gradient 3s linear infinite; z-index: -1;
+        }
+        .ring-spin-gold::before {
+            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            background: conic-gradient(from 0deg, #eab308, #fef08a, #facc15, transparent, #eab308);
+            animation: rotate-gradient 2s linear infinite; z-index: -1;
+        }
+
+        @keyframes float-gentle {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(1deg); }
+        }
+        .float-animation { animation: float-gentle 3.5s infinite ease-in-out; }
+
+        .tooltip-trigger:hover .tooltip-content { opacity: 1; visibility: visible; transform: translate(-50%, -105%); }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        
+        #map-svg {
+            transition: none;
+            cursor: grab;
+            touch-action: none;
+            position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
+        }
+        #map-svg:active {
+            cursor: grabbing;
+        }
+
+        .smooth-move {
+            transition: left 1s cubic-bezier(0.25, 1, 0.5, 1), top 1s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+<body class="relative flex flex-col select-none">
+    <div class="ocean-bg"></div>
+
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+    <header class="relative z-40 glass-panel px-4 py-2.5 md:px-6 md:py-3.5 flex items-center justify-between gap-2 shadow-md flex-shrink-0">
+        <div class="flex items-center gap-2 md:gap-3 min-w-0">
+            <div class="bg-gradient-to-tr from-orange-400 via-pink-500 to-yellow-400 p-1.5 md:p-2 rounded-xl text-white shadow flex-shrink-0">
+                <i data-lucide="sun" class="w-4 h-4 md:w-5 md:h-5 animate-spin" style="animation-duration: 25s;"></i>
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-xs md:text-xl font-black tracking-tight bg-gradient-to-r from-orange-600 via-pink-600 to-cyan-600 bg-clip-text text-transparent truncate">
+                    One For All All For One キャンペーン in 沖縄
+                </h1>
+                <p class="text-[9px] md:text-[10px] text-emerald-700 font-extrabold tracking-widest flex items-center gap-1 truncate">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                    横浜第二FA支社・営業進捗マップ
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 md:gap-3 flex-shrink-0">
+            <div class="flex bg-slate-200/60 p-0.5 md:p-1 rounded-xl border border-slate-300/40 shadow-inner">
+                <button onclick="changeMode('june')" id="btn-mode-june" class="px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow">
+                    6月
+                </button>
+                <button onclick="changeMode('july')" id="btn-mode-july" class="px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 text-slate-600 hover:text-slate-900">
+                    7月
+                </button>
+                <button onclick="changeMode('total')" id="btn-mode-total" class="px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 text-slate-600 hover:text-slate-900">
+                    計
+                </button>
+            </div>
+
+            <button onclick="startCampaignAnimation()" class="p-2 md:px-5 md:py-2 rounded-xl bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-400 hover:to-yellow-400 text-white text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 fill-current"></i>
+                <span class="hidden md:inline">演出スタート！</span>
+            </button>
+            <button onclick="toggleDrawer()" class="p-2 rounded-xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 shadow-sm transition-all">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full relative overflow-hidden z-10">
+        
+        <div class="absolute top-3 left-3 z-30 flex flex-col gap-2 pointer-events-none max-w-[260px]">
+            <div class="glass-panel p-2.5 md:p-3.5 rounded-xl shadow-xl flex items-center gap-3 w-56 md:w-64 pointer-events-auto">
+                <div class="p-2 rounded-lg bg-cyan-500 text-white shadow-sm flex-shrink-0">
+                    <i data-lucide="plane" class="w-4 h-4 md:w-5 md:h-5"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-end mb-0.5">
+                        <span class="text-[10px] md:text-[11px] text-slate-500 font-extrabold truncate">支社全体進捗</span>
+                        <span id="stat-branch-pct" class="text-base md:text-xl font-black text-cyan-600 leading-none ml-1">0.0%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-1.5 md:h-2 overflow-hidden mt-1">
+                        <div id="stat-branch-bar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel p-2.5 md:p-3 rounded-xl shadow-xl w-56 md:w-64 pointer-events-auto flex flex-col gap-1.5">
+                <button onclick="toggleDeptPanelMobile()" class="w-full text-xs font-black text-slate-700 pb-1 border-b border-slate-200/60 flex items-center justify-between md:pointer-events-none">
+                    <span class="flex items-center gap-1">
+                        営業課対抗レース
+                        <span id="dept-toggle-icon" class="text-[9px] bg-slate-200 text-slate-600 px-1 rounded font-bold md:hidden">開く</span>
+                    </span>
+                    <i data-lucide="ship" class="w-3.5 h-3.5 text-emerald-500"></i>
+                </button>
+                <div id="dept-scores-container" class="space-y-1.5 hidden md:block"></div>
+            </div>
+        </div>
+
+        <div id="okinawa-area-wrapper" class="absolute bottom-4 right-4 z-30 pointer-events-none flex flex-col items-end">
+            <button onclick="toggleOkinawaPopupMobile()" class="md:hidden pointer-events-auto w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-white flex items-center justify-center shadow-2xl border-2 border-white active:scale-95 transition-all">
+                <i data-lucide="crown" class="w-5 h-5"></i>
+            </button>
+
+            <div id="fixed-okinawa-resort-area" class="hidden md:flex w-64 p-3.5 rounded-2xl bg-white/85 backdrop-blur-md border-2 border-dashed border-yellow-500 shadow-2xl flex-col items-center justify-center pointer-events-auto mt-2 max-h-[220px] overflow-y-auto">
+                <span class="text-[11px] font-black text-slate-800 tracking-wider filter drop-shadow mb-2">👑 OKINAWA AREA 👑</span>
+                <div id="resort-avatars-grid" class="grid grid-cols-4 gap-2 w-full p-1 bg-slate-50/40 rounded-xl border border-slate-200/50 min-h-[80px]"></div>
+            </div>
+        </div>
+
+        <svg id="map-svg" viewBox="0 0 1200 740" preserveAspectRatio="xMidYMid slice">
+            <g id="japan-islands" fill="#fef3c7" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round" transform="translate(10, -30) scale(0.98)">
+                <path d="M 980,100 L 1050,110 L 1090,150 L 1110,130 L 1150,160 L 1130,220 L 1080,240 L 1010,210 L 980,220 L 950,180 Z" />
+                <path d="M 950,220 L 970,250 L 930,300 L 920,380 L 840,430 L 800,440 L 750,430 L 700,450 L 650,470 L 580,470 L 530,500 L 490,520 L 450,510 L 480,450 L 550,430 L 640,400 L 750,380 L 830,320 L 900,240 Z" />
+                <path d="M 520,530 L 570,530 L 560,560 L 510,560 Z" />
+                <path d="M 430,530 L 470,540 L 450,600 L 410,610 L 400,560 Z" />
+                <path d="M 140,640 L 170,630 L 210,650 L 190,670 L 150,670 Z" />
+            </g>
+
+            <path id="path-branch" d="M 850,395 C 700,100, 300,50, 150,220 C 50,350, 70,500, 160,620" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="2,14" stroke-linecap="round" opacity="0.9" />
+            <path id="path-dept" d="M 850,395 C 780,540, 560,630, 400,610 C 300,600, 220,610, 160,620" fill="none" stroke="#fef08a" stroke-width="4" stroke-dasharray="10,10" opacity="0.9" />
+            <path id="path-personal" d="M 850,395 C 680,440, 450,490, 350,510 C 260,530, 200,570, 160,620" fill="none" stroke="#ffedd5" stroke-width="2.5" stroke-dasharray="4,6" opacity="0.85" />
+
+            <g transform="translate(850, 395)">
+                <circle r="14" fill="#ffffff" stroke="#f97316" stroke-width="2.5" />
+                <text y="4" text-anchor="middle" fill="#f97316" font-size="12" font-weight="bold">⚓</text>
+                <text y="26" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="900" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.6))">YOKOHAMA</text>
+            </g>
+            <g transform="translate(160, 620)">
+                <circle r="16" fill="#ffffff" stroke="#ef4444" stroke-width="2.5" class="shadow-md" />
+                <text y="4" text-anchor="middle" fill="#ef4444" font-size="15" font-weight="bold">🌺</text>
+            </g>
+        </svg>
+
+        <div id="avatar-container" class="absolute inset-0 w-full h-full pointer-events-none z-20"></div>
+    </main>
+
+    <footer class="glass-panel border-t border-slate-200/60 px-6 py-2.5 flex justify-between items-center text-[11px] text-slate-600 shadow-sm relative z-30 hidden sm:flex flex-shrink-0">
+        <div class="font-bold">© 2026 Campaigns. All For One キャンペーン 実行委員会</div>
+        <div class="flex items-center gap-4 font-bold">
+            <span class="flex items-center gap-1.5"><span class="bg-cyan-500 text-white text-[9px] px-1 rounded shadow font-black">✨</span> メディカル 50%達成</span>
+            <span class="flex items-center gap-1.5"><span class="text-yellow-500 text-xs">👑</span> メディカル 100%達成</span>
+        </div>
+    </footer>
+
+    <div id="drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-[450px] bg-slate-50 border-l border-slate-200 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="database" class="w-4 h-4 text-indigo-500"></i>
+                <h2 class="text-base font-black text-slate-800">データ管理 ＆ 設定</h2>
+            </div>
+            <button onclick="toggleDrawer()" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="text-xs font-black text-slate-500 flex items-center gap-1"><i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-emerald-500"></i>CSV連携</h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer flex flex-col items-center justify-center p-3 border border-dashed border-indigo-500 rounded-xl bg-slate-50/50 hover:bg-indigo-50/30 text-center">
+                        <i data-lucide="upload" class="w-5 h-5 text-indigo-500 mb-0.5"></i>
+                        <span class="text-xs font-bold text-slate-700">インポート</span>
+                        <input type="file" id="csv-file" accept=".csv" class="hidden" onchange="handleCSVImport(event)">
+                    </label>
+                    <button onclick="exportToCSV()" class="flex flex-col items-center justify-center p-3 border border-slate-300 hover:border-emerald-500 rounded-xl bg-white hover:bg-emerald-50/30 text-center">
+                        <i data-lucide="download" class="w-5 h-5 text-emerald-500 mb-0.5"></i>
+                        <span class="text-xs font-bold text-slate-700">エクスポート</span>
+                    </button>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-black text-slate-500">実績の個別修正</h3>
+                    <span id="member-count-badge" class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-[10px] font-black">25名</span>
+                </div>
+                <div class="space-y-2" id="edit-member-list"></div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-slate-200 bg-white flex gap-2">
+            <button onclick="resetToDemo()" class="flex-1 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-xs font-black transition-all">デモデータに戻す</button>
+            <button onclick="saveAndApply()" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-xs font-black shadow-sm transition-all">保存して反映</button>
+        </div>
+    </div>
+
+    <script>
+        const DEPT_CONFIGS = {
+            "1": { j_target: 9424800, count: 11 },
+            "2": { j_target: 6564800, count: 8 },
+            "4": { j_target: 6969600, count: 4 },
+            "5": { j_target: 1680800, count: 2 }
+        };
+        const BRANCH_SINGLE_BUDGET = 22400000; 
+        const MEDICAL_TARGETS = { june: 3.0, july: 3.0, total: 6.0 };
+
+        const INITIAL_DEMO_DATA = [
+            { id: "1001", name: "神田", department: "1", role: "Mgr", kp_june: 450000, kp_july: 430000, med_june: 3.0, med_july: 3.0, image_url: "" },
+            { id: "1002", name: "森山", department: "1", role: "FA",  kp_june: 430000, kp_july: 450000, med_june: 4.0, med_july: 2.0, image_url: "" },
+            { id: "1003", name: "幸田", department: "1", role: "FA",  kp_june: 300000, kp_july: 350000, med_june: 2.0, med_july: 1.0, image_url: "" },
+            { id: "1004", name: "窪澤", department: "1", role: "FA",  kp_june: 460000, kp_july: 420000, med_june: 3.0, med_july: 3.0, image_url: "" },
+            { id: "1005", name: "長沼", department: "1", role: "FA",  kp_june: 210000, kp_july: 250000, med_june: 1.0, med_july: 1.5, image_url: "" },
+            { id: "1006", name: "常盤", department: "1", role: "FA",  kp_june: 410000, kp_july: 400000, med_june: 3.0, med_july: 2.5, image_url: "" },
+            { id: "1007", name: "片岡", department: "1", role: "FA",  kp_june: 150000, kp_july: 180000, med_june: 0.5, med_july: 1.0, image_url: "" },
+            { id: "1008", name: "山本", department: "1", role: "FA",  kp_june: 380000, kp_july: 390000, med_june: 2.0, med_july: 2.0, image_url: "" },
+            { id: "1009", name: "久松", department: "1", role: "FA",  kp_june: 440000, kp_july: 420000, med_june: 3.0, med_july: 3.5, image_url: "" },
+            { id: "1010", name: "風間", department: "1", role: "FA",  kp_june: 280000, kp_july: 300000, med_june: 1.5, med_july: 1.5, image_url: "" },
+            { id: "1011", name: "梅津", department: "1", role: "FA",  kp_june: 400000, kp_july: 410000, med_june: 3.0, med_july: 2.0, image_url: "" },
+            
+            { id: "2001", name: "鈴木", department: "2", role: "Mgr", kp_june: 420000, kp_july: 410000, med_june: 3.0, med_july: 3.0, image_url: "" },
+            { id: "2002", name: "水野", department: "2", role: "FA",  kp_june: 250000, kp_july: 280000, med_june: 1.0, med_july: 2.0, image_url: "" },
+            { id: "2003", name: "宮代", department: "2", role: "FA",  kp_june: 430000, kp_july: 400000, med_june: 4.0, med_july: 2.0, image_url: "" },
+            { id: "2004", name: "松本", department: "2", role: "FA",  kp_june: 180000, kp_july: 200000, med_june: 0.5, med_july: 0.5, image_url: "" },
+            { id: "2005", name: "酒井", department: "2", role: "FA",  kp_june: 415000, kp_july: 420000, med_june: 3.0, med_july: 4.0, image_url: "" },
+            { id: "2006", name: "色摩", department: "2", role: "FA",  kp_june: 310000, bg_july: 0, kp_july: 330000, med_june: 2.0, med_july: 1.5, image_url: "" },
+            { id: "2007", name: "谷口", department: "2", role: "FA",  kp_june: 390000, kp_july: 400000, med_june: 2.5, med_july: 2.5, image_url: "" },
+            { id: "2008", name: "小菅", department: "2", role: "FA",  kp_june: 220000, kp_july: 240000, med_june: 1.0, med_july: 1.0, image_url: "" },
+
+            { id: "4001", name: "伊藤", department: "4", role: "Mgr", kp_june: 880000, kp_july: 890000, med_june: 4.0, med_july: 3.5, image_url: "" },
+            { id: "4002", name: "村井", department: "4", role: "FA",  kp_june: 600000, kp_july: 650000, med_june: 2.0, med_july: 2.5, image_url: "" },
+            { id: "4003", name: "服部", department: "4", role: "FA",  kp_june: 900000, kp_july: 920000, med_june: 5.0, med_july: 5.0, image_url: "" },
+            { id: "4004", name: "黒子", department: "4", role: "FA",  kp_june: 450000, kp_july: 500000, med_june: 1.5, med_july: 2.0, image_url: "" },
+
+            { id: "5001", name: "河野", department: "5", role: "Mgr", kp_june: 430000, kp_july: 440000, med_june: 3.5, med_july: 3.0, image_url: "" },
+            { id: "5002", name: "太田", department: "5", role: "FA",  kp_june: 400000, kp_july: 410000, med_june: 2.5, med_july: 2.0, image_url: "" }
+        ];
+
+        let members = [];
+        let currentMode = 'june';
+        let isSmoothTransitionActive = false;
+
+        let camX = 0; let camY = 0; let camW = 1200; let camH = 740;
+        let isDragging = false; let dragStartX = 0; let dragStartY = 0;
+        let startTouchDistance = 0; let startCamW = 1200; let startCamH = 740;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSavedData();
+            lucide.createIcons();
+            initManualCameraEvents();
+            renderMap();
+            renderEditForm();
+            updateSummaryStats();
+            window.addEventListener('resize', renderMap);
+        });
+
+        function loadSavedData() {
+            const saved = localStorage.getItem('campaign_sales_data_v3');
+            if (saved) {
+                try { members = JSON.parse(saved); } catch(e) { members = [...INITIAL_DEMO_DATA]; }
+            } else { members = [...INITIAL_DEMO_DATA]; }
+        }
+
+        function saveData() { localStorage.setItem('campaign_sales_data_v3', JSON.stringify(members)); }
+
+        function resetToDemo() {
+            if (confirm('データを初期のデモデータにリセットしますか？')) {
+                members = JSON.parse(JSON.stringify(INITIAL_DEMO_DATA));
+                saveData(); 
+                isSmoothTransitionActive = false;
+                renderMap(); renderEditForm(); updateSummaryStats();
+                showToast('デモデータを読み込みました', 'info');
+            }
+        }
+
+        function saveAndApply() {
+            members.forEach(m => {
+                const kpJuneInput = document.getElementById(`edit-kp-june-${m.id}`);
+                const kpJulyInput = document.getElementById(`edit-kp-july-${m.id}`);
+                const medJuneInput = document.getElementById(`edit-med-june-${m.id}`);
+                const medJulyInput = document.getElementById(`edit-med-july-${m.id}`);
+
+                if (kpJuneInput) m.kp_june = (parseFloat(kpJuneInput.value) || 0) * 10000;
+                if (kpJulyInput) m.kp_july = (parseFloat(kpJulyInput.value) || 0) * 10000;
+                if (medJuneInput) m.med_june = parseFloat(medJuneInput.value) || 0;
+                if (medJulyInput) m.med_july = parseFloat(medJulyInput.value) || 0;
+            });
+            saveData(); 
+            triggerSmoothMove();
+            toggleDrawer();
+            showToast('データを保存しました！⛵', 'success');
+        }
+
+        function changeMode(mode) {
+            currentMode = mode;
+            ['june', 'july', 'total'].forEach(m => {
+                const btn = document.getElementById(`btn-mode-${m}`);
+                btn.className = m === mode 
+                    ? "px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow"
+                    : "px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 text-slate-600 hover:text-slate-900";
+            });
+            triggerSmoothMove();
+            updateSummaryStats();
+            showToast(`${mode === 'june' ? '6月度' : mode === 'july' ? '7月度' : '連月トータル'}モードに切り替えました`, 'info');
+        }
+
+        function triggerSmoothMove() {
+            isSmoothTransitionActive = true;
+            renderMap();
+            setTimeout(() => { isSmoothTransitionActive = false; renderMap(); }, 1000);
+        }
+
+        function getMemberTarget(member, mode = currentMode) {
+            const config = DEPT_CONFIGS[member.department];
+            if (!config) return 1000000;
+            const singleTarget = config.j_target / config.count;
+            return mode === 'total' ? singleTarget * 2 : singleTarget;
+        }
+
+        function getMemberProgress(member, mode = currentMode) {
+            const target = getMemberTarget(member, mode);
+            let currentKP = mode === 'june' ? member.kp_june : mode === 'july' ? member.kp_july : member.kp_june + member.kp_july;
+            return Math.min((currentKP / target) * 100, 100);
+        }
+
+        function getMedicalLevel(member, mode = currentMode) {
+            const target = MEDICAL_TARGETS[mode];
+            let currentMed = mode === 'june' ? member.med_june : mode === 'july' ? member.med_july : member.med_june + member.med_july;
+            if (currentMed >= target) return 3;       
+            if (currentMed >= (target / 2)) return 2; 
+            return 1;
+        }
+
+        function getBranchProgress(mode = currentMode) {
+            const totalTarget = mode === 'total' ? BRANCH_SINGLE_BUDGET * 2 : BRANCH_SINGLE_BUDGET;
+            let totalKP = 0; 
+            members.forEach(m => { totalKP += mode === 'june' ? m.kp_june : mode === 'july' ? m.kp_july : (m.kp_june + m.kp_july); });
+            return (totalKP / totalTarget) * 100;
+        }
+
+        function getDeptProgress(dept, mode = currentMode) {
+            const config = DEPT_CONFIGS[dept];
+            if (!config) return 0;
+            const deptTarget = mode === 'total' ? config.j_target * 2 : config.j_target;
+            let totalKP = 0; 
+            members.filter(m => m.department === String(dept)).forEach(m => { totalKP += mode === 'june' ? m.kp_june : mode === 'july' ? m.kp_july : (m.kp_june + m.kp_july); });
+            return (totalKP / deptTarget) * 100;
+        }
+
+        function getPointOnPath(pathId, progressPct) {
+            const path = document.getElementById(pathId);
+            if (!path) return { x: 0, y: 0 };
+            const totalLength = path.getTotalLength();
+            const pt = path.getPointAtLength(totalLength * (progressPct / 100));
+            return getPointOnPathDirect(pt.x, pt.y);
+        }
+
+        function getPointOnPathDirect(svgX, svgY) {
+            const svg = document.getElementById('map-svg');
+            if (!svg) return { x: 0, y: 0 };
+            const containerRect = svg.parentElement.getBoundingClientRect();
+            const scale = Math.max(containerRect.width / camW, containerRect.height / camH);
+            const offsetX = camX + (camW - containerRect.width / scale) / 2;
+            const offsetY = camY + (camH - containerRect.height / scale) / 2;
+            return {
+                x: containerRect.left + (svgX - offsetX) * scale,
+                y: containerRect.top + (svgY - offsetY) * scale
+            };
+        }
+
+        function getDynamicIconSize() {
+            const baseSize = 36; const zoomRatio = 1200 / camW; 
+            return Math.min(Math.max(baseSize * zoomRatio, baseSize), 120);
+        }
+
+        function applyCamera() {
+            const svg = document.getElementById('map-svg'); if (!svg) return;
+            svg.setAttribute('viewBox', `${camX} ${camY} ${camW} ${camH}`);
+        }
+
+        function toggleDeptPanelMobile() {
+            if (window.innerWidth >= 768) return;
+            const container = document.getElementById('dept-scores-container');
+            const badge = document.getElementById('dept-toggle-icon');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden'); badge.innerText = '閉じる';
+            } else {
+                container.classList.add('hidden'); badge.innerText = '開く';
+            }
+        }
+
+        function toggleOkinawaPopupMobile() {
+            const panel = document.getElementById('fixed-okinawa-resort-area');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                panel.classList.add('flex', 'fixed', 'inset-x-4', 'bottom-24', 'w-auto', 'z-50');
+            } else {
+                panel.classList.add('hidden');
+                panel.classList.remove('flex', 'fixed', 'inset-x-4', 'bottom-24', 'w-auto', 'z-50');
+            }
+        }
+
+        function initManualCameraEvents() {
+            const svg = document.getElementById('map-svg'); if (!svg) return;
+            const startDrag = (e) => {
+                if (e.touches && e.touches.length === 2) {
+                    isDragging = false;
+                    startTouchDistance = Math.sqrt(Math.pow(e.touches[1].clientX - e.touches[0].clientX, 2) + Math.pow(e.touches[1].clientY - e.touches[0].clientY, 2));
+                    startCamW = camW; startCamH = camH;
+                } else {
+                    isDragging = true;
+                    dragStartX = e.touches ? e.touches[0].clientX : e.clientX;
+                    dragStartY = e.touches ? e.touches[0].clientY : e.clientY;
+                }
+            };
+            const doDrag = (e) => {
+                const rect = svg.getBoundingClientRect();
+                if (e.touches && e.touches.length === 2) {
+                    e.preventDefault(); if (startTouchDistance === 0) return;
+                    const currentDistance = Math.sqrt(Math.pow(e.touches[1].clientX - e.touches[0].clientX, 2) + Math.pow(e.touches[1].clientY - e.touches[0].clientY, 2));
+                    const ratio = startTouchDistance / (currentDistance || 1);
+                    if (startCamW * ratio < 150 || startCamW * ratio > 4000) return;
+                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+                    const scale = Math.max(rect.width / camW, rect.height / camH);
+                    const svgCenterX = camX + (camW - rect.width / scale) / 2 + centerX / scale;
+                    const svgCenterY = camY + (camH - rect.height / scale) / 2 + centerY / scale;
+                    camW = startCamW * ratio; camH = startCamH * ratio;
+                    const newScale = Math.max(rect.width / camW, rect.height / camH);
+                    camX = svgCenterX - centerX / newScale - (camW - rect.width / newScale) / 2;
+                    camY = svgCenterY - centerY / newScale - (camH - rect.height / newScale) / 2;
+                    applyCamera(); renderAllElements(); return;
+                }
+                if (!isDragging) return;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const scale = Math.max(rect.width / camW, rect.height / camH);
+                camX -= (clientX - dragStartX) / scale; camY -= (clientY - dragStartY) / scale;
+                dragStartX = clientX; dragStartY = clientY;
+                applyCamera(); renderAllElements();
+            };
+            svg.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', doDrag);
+            window.addEventListener('mouseup', () => isDragging = false);
+            svg.addEventListener('touchstart', startDrag, { passive: false });
+            window.addEventListener('touchmove', doDrag, { passive: false });
+            window.addEventListener('touchend', () => { isDragging = false; startTouchDistance = 0; });
+        }
+
+        function renderAllElements() {
+            const container = document.getElementById('avatar-container'); if (!container) return;
+            const currentNodes = Array.from(container.children); const activeIds = new Set();
+            const gridContainer = document.getElementById('resort-avatars-grid'); if (gridContainer) gridContainer.innerHTML = '';
+            const dynamicSize = getDynamicIconSize();
+
+            const branchRawPct = Math.min(getBranchProgress(), 100);
+            const branchPoint = getPointOnPath('path-branch', branchRawPct);
+            updateOrCreateElement(container, 'branch_global', branchPoint.x, branchPoint.y, () => {
+                const size = dynamicSize * 2.2; 
+                return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-2xl bg-white shadow-2xl border-2 border-cyan-300 flex items-center justify-center p-1"><svg viewBox="0 0 100 100" class="w-[90%] h-[90%] drop-shadow-md" style="transform: rotate(225deg);"><path d="M50,5 C52,25 55,40 88,58 L88,64 L54,54 L53,82 L66,92 L66,96 L50,91 L34,96 L34,92 L47,82 L46,54 L12,64 L12,58 C45,40 48,25 50,5 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.8"/><path d="M50,5 C51,25 53,40 88,58 L88,60 L52,54 Z" fill="#0ea5e9"/></svg><span style="font-size: ${Math.max(size*0.1, 9)}px;" class="absolute -top-2.5 left-1/2 transform -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-cyan-600 text-white font-black border border-white shadow whitespace-nowrap">支社全体航空</span></div>`;
+            }, 'z-25 float-animation');
+            activeIds.add('branch_global');
+
+            ["1", "2", "4", "5"].forEach((dNum) => {
+                const deptRawPct = Math.min(getDeptProgress(dNum), 100);
+                const deptPoint = getPointOnPath('path-dept', deptRawPct);
+                updateOrCreateElement(container, `dept_${dNum}`, deptPoint.x, deptPoint.y, () => {
+                    const sailColors = { "1": ["#fb923c", "#ea580c"], "2": ["#22d3ee", "#0284c7"], "4": ["#34d399", "#059669"], "5": ["#f472b6", "#db2777"] };
+                    const colors = sailColors[dNum] || ["#94a3b8", "#475569"]; const size = dynamicSize * 1.8;
+                    return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-full bg-white shadow-2xl border-2 border-slate-200 flex items-center justify-center"><svg viewBox="0 0 64 64" class="w-[85%] h-[85%]"><defs><linearGradient id="sGrad-${dNum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${colors[0]}"/><stop offset="100%" stop-color="${colors[1]}"/></linearGradient></defs><line x1="32" y1="6" x2="32" y2="46" stroke="#475569" stroke-width="2.5"/><path d="M34,8 C40,18 48,32 52,42 L32,43 Z" fill="url(#sGrad-${dNum})" /><path d="M30,12 C24,20 18,32 14,42 L32,42 Z" fill="#e2e8f0" /><path d="M10,44 C20,44 44,44 54,44 C50,50 42,54 32,54 C22,54 14,50 10,44 Z" fill="#1e293b" /></svg><span style="width: ${size*0.35}px; height: ${size*0.35}px; font-size: ${size*0.18}px;" class="absolute -top-1 -right-1 rounded-full bg-slate-800 text-white font-black flex items-center justify-center border-2 border-white shadow-md">${dNum}課</span></div>`;
+                }, 'z-20');
+                activeIds.add(`dept_${dNum}`);
+            });
+
+            members.forEach(m => {
+                const rawPct = getMemberProgress(m);
+                const modeMed = currentMode === 'june' ? m.med_june : currentMode === 'july' ? m.med_july : (m.med_june + m.med_july);
+                const medTarget = MEDICAL_TARGETS[currentMode];
+                if (rawPct >= 100 && modeMed >= medTarget) {
+                    renderResortGridAvatar(m);
+                } else {
+                    const pt = getPointOnPath('path-personal', rawPct);
+                    updateOrCreateElement(container, `member_${m.id}`, pt.x, pt.y, () => {
+                        const deptColors = { "1": "from-orange-400 to-rose-500", "2": "from-cyan-400 to-blue-500", "4": "from-emerald-400 to-teal-500", "5": "from-pink-400 to-purple-500" };
+                        const medLevel = getMedicalLevel(m); let ringClass = ''; let statusBadge = ''; const size = dynamicSize;
+                        if (medLevel === 3) { ringClass = 'ring-spin-gold'; statusBadge = `<div class="absolute left-0 right-0 flex justify-center select-none pointer-events-none z-30" style="top: -${size*0.3}px; font-size: ${size*0.4}px;">👑</div>`; }
+                        else if (medLevel === 2) { ringClass = 'ring-spin-cyan'; statusBadge = `<div class="absolute flex justify-center select-none pointer-events-none z-30" style="top: -${size*0.1}px; right: -${size*0.1}px;"><span style="font-size: ${size*0.25}px;" class="bg-cyan-500 text-white font-black rounded shadow border border-white">✨</span></div>`; }
+                        let avatarContent = m.image_url ? `<img src="${m.image_url}" class="w-full h-full object-cover rounded-full">` : `<div style="font-size: ${size*0.32}px" class="w-full h-full bg-gradient-to-tr ${deptColors[m.department] || 'from-slate-400 to-slate-500'} rounded-full flex items-center justify-center font-black text-white">${m.name.substring(0, 2)}</div>`;
+                        return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md ${ringClass}">${avatarContent}${statusBadge}</div>`;
+                    }, 'z-10');
+                    activeIds.add(`member_${m.id}`);
+                }
+            });
+
+            currentNodes.forEach(node => { if (!activeIds.has(node.id)) node.remove(); });
+        }
+
+        function updateOrCreateElement(container, id, x, y, htmlContentFunc, extraClasses = '') {
+            let el = document.getElementById(id);
+            if (!el) { el = document.createElement('div'); el.id = id; container.appendChild(el); }
+            el.className = `absolute pointer-events-auto cursor-pointer tooltip-trigger ${extraClasses} ${isSmoothTransitionActive ? 'smooth-move' : ''}`;
+            el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.transform = 'translate(-50%, -50%)';
+            el.innerHTML = htmlContentFunc();
+        }
+
+        function renderResortGridAvatar(m) {
+            const deptColors = { "1": "from-orange-400 to-rose-500", "2": "from-cyan-400 to-blue-500", "4": "from-emerald-400 to-teal-500", "5": "from-pink-400 to-purple-500" };
+            const medLevel = getMedicalLevel(m); let ringClass = ''; let statusBadge = ''; const size = 32;
+            if (medLevel === 3) ringClass = 'ring-spin-gold'; else if (medLevel === 2) ringClass = 'ring-spin-cyan';
+            let avatarContent = m.image_url ? `<img src="${m.image_url}" class="w-full h-full object-cover rounded-full">` : `<div style="font-size: ${size*0.32}px" class="w-full h-full bg-gradient-to-tr ${deptColors[m.department] || 'from-slate-400 to-slate-500'} rounded-full flex items-center justify-center font-black text-white">${m.name.substring(0, 2)}</div>`;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'relative w-9 h-9 flex items-center justify-center pointer-events-auto mx-auto';
+            wrapper.innerHTML = `<div class="relative w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md ${ringClass}">${avatarContent}</div>`;
+            const grid = document.getElementById('resort-avatars-grid'); if (grid) grid.appendChild(wrapper);
+        }
+
+        function renderMap() { renderAllElements(); }
+        function startCampaignAnimation() { showToast('進捗状況の同期を開始します... 🌺', 'success'); triggerSmoothMove(); }
+
+        function updateSummaryStats() {
+            const branchProgress = getBranchProgress();
+            document.getElementById('stat-branch-pct').innerText = `${branchProgress.toFixed(1)}%`;
+            document.getElementById('stat-branch-bar').style.width = `${Math.min(branchProgress, 100)}%`;
+            const depts = ["1", "2", "4", "5"]; const scoresContainer = document.getElementById('dept-scores-container');
+            if (scoresContainer) {
+                scoresContainer.innerHTML = ''; const deptColors = { "1": "from-orange-400 to-rose-400", "2": "from-cyan-400 to-sky-400", "4": "from-emerald-400 to-teal-400", "5": "from-pink-400 to-purple-400" };
+                depts.forEach(d => {
+                    const pct = getDeptProgress(d);
+                    scoresContainer.innerHTML += `<div><div class="flex justify-between text-[11px] font-extrabold text-slate-600 mb-0.5"><span>第 ${d} 営業課</span><span class="text-slate-900 font-black">${pct.toFixed(1)}%</span></div><div class="w-full bg-slate-200 rounded-full h-1 overflow-hidden"><div class="bg-gradient-to-r ${deptColors[d]} h-full rounded-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div></div></div>`;
+                });
+            }
+        }
+
+        function renderEditForm() {
+            const listEl = document.getElementById('edit-member-list'); if (!listEl) return;
+            listEl.innerHTML = '';
+            const sortedMembers = [...members].sort((a, b) => a.department !== b.department ? a.department.localeCompare(b.department) : a.id.localeCompare(b.id));
+            sortedMembers.forEach(m => {
+                const row = document.createElement('div'); row.className = 'bg-white border border-slate-200 p-3 rounded-xl space-y-2 shadow-sm';
+                row.innerHTML = `<div class="flex justify-between items-center border-b border-slate-100 pb-1 text-xs"><span class="font-black text-slate-800">${m.name}</span><span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold">${m.department}課</span></div><div class="grid grid-cols-2 gap-2 text-[11px]"><div><label class="text-slate-400 font-bold">6月 KP (万)</label><input type="number" step="any" id="edit-kp-june-${m.id}" value="${m.kp_june / 10000}" class="w-full bg-slate-50 border rounded p-1 text-center font-bold"></div><div><label class="text-slate-400 font-bold">6月 医療 (件)</label><input type="number" id="edit-med-june-${m.id}" value="${m.med_june}" class="w-full bg-slate-50 border rounded p-1 text-center font-bold"></div><div><label class="text-slate-400 font-bold">7月 KP (万)</label><input type="number" step="any" id="edit-kp-july-${m.id}" value="${m.kp_july / 10000}" class="w-full bg-slate-50 border rounded p-1 text-center font-bold"></div><div><label class="text-slate-400 font-bold">7月 医療 (件)</label><input type="number" id="edit-med-july-${m.id}" value="${m.med_july}" class="w-full bg-slate-50 border rounded p-1 text-center font-bold"></div></div>`;
+                listEl.appendChild(row);
+            });
+        }
+
+        function handleCSVImport(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsedData = parseCSV(e.target.result);
+                    if (parsedData && parsedData.length > 0) { members = parsedData; saveData(); isSmoothTransitionActive = false; renderMap(); renderEditForm(); updateSummaryStats(); showToast('CSVデータを正常にインポートしました 🌴', 'success'); }
+                } catch (err) { showToast(`エラー: ${err.message}`, 'error'); }
+            };
+            reader.readAsText(file, 'UTF-8'); event.target.value = '';
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/); if (lines.length < 2) throw new Error('CSVファイルが正しくありません。');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '')); const results = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim(); if (!line) continue;
+                const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, '')); const rowObj = {}; headers.forEach((h, idx) => { rowObj[h] = values[idx] || ''; });
+                results.push({ id: String(rowObj.id), name: String(rowObj.name), department: String(rowObj.department), role: String(rowObj.role), kp_june: parseFloat(rowObj.kp_june) || 0, kp_july: parseFloat(rowObj.kp_july) || 0, med_june: parseFloat(rowObj.med_june) || 0, med_july: parseFloat(rowObj.med_july) || 0, image_url: rowObj.image_url || '' });
+            }
+            return results;
+        }
+
+        function exportToCSV() {
+            if (members.length === 0) return;
+            const headers = ['id', 'name', 'department', 'role', 'kp_june', 'kp_july', 'med_june', 'med_july', 'image_url']; const csvRows = [headers.join(',')];
+            members.forEach(m => { csvRows.push([m.id, `"${m.name}"`, m.department, m.role, m.kp_june, m.kp_july, m.med_june, m.med_july, `"${m.image_url || ''}"`].join(',')); });
+            const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.setAttribute("download", `campaign_sales_data_${currentMode}.csv`); link.click();
+            showToast('最新データをエクスポートしました 🏄‍♂️', 'success');
+        }
+
+        function toggleDrawer() { document.getElementById('drawer').classList.toggle('translate-x-full'); }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container'); if (!container) return;
+            const toast = document.createElement('div'); toast.className = 'toast-active flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black pointer-events-auto shadow-xl';
+            const colors = { success: 'bg-emerald-50 border border-emerald-200 text-emerald-700', warning: 'bg-amber-50 border border-amber-200 text-amber-700', error: 'bg-rose-50 border border-rose-200 text-rose-700', info: 'bg-white border border-slate-200 text-slate-700' };
+            const icons = { success: 'check-circle', warning: 'alert-triangle', error: 'alert-octagon', info: 'info' };
+            toast.className += ` ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i data-lucide="${icons[type] || icons.info}" class="w-4 h-4 flex-shrink-0"></i><div class="flex-1">${message}</div>`;
+            container.appendChild(toast); lucide.createIcons();
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+    </script>
+</body>
+</html>
