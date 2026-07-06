@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -9,7 +10,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght=400;600;700;800;900&family=Noto+Sans+JP:wght=400;500;700;900&display=swap');
         
-        /* iOS特有のバウンス・はみ出しを徹底的に潰す */
         html, body {
             font-family: 'Noto Sans JP', 'Montserrat', sans-serif;
             background: #0ea5e9;
@@ -19,7 +19,7 @@
             top: 0; left: 0; right: 0; bottom: 0;
             width: 100vw;
             height: 100vh;
-            height: -webkit-fill-available; /* iOS Safariのバー対策 */
+            height: -webkit-fill-available;
             margin: 0; padding: 0;
         }
 
@@ -28,32 +28,26 @@
             position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0;
         }
 
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-
         @keyframes rotate-gradient {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         .ring-spin-cyan::before {
-            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            content: ''; position: absolute; inset: -2px; border-radius: 50%;
             background: conic-gradient(from 0deg, #06b6d4, #22d3ee, transparent, #06b6d4);
             animation: rotate-gradient 3s linear infinite; z-index: -1;
         }
         .ring-spin-gold::before {
-            content: ''; position: absolute; inset: -3px; border-radius: 50%;
+            content: ''; position: absolute; inset: -2px; border-radius: 50%;
             background: conic-gradient(from 0deg, #eab308, #fef08a, #facc15, transparent, #eab308);
             animation: rotate-gradient 2s linear infinite; z-index: -1;
         }
 
         @keyframes float-gentle {
             0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-6px) rotate(1deg); }
+            50% { transform: translateY(-4px) rotate(0.5deg); }
         }
         .float-animation { animation: float-gentle 3.5s infinite ease-in-out; }
-
-        .tooltip-trigger:hover .tooltip-content { opacity: 1; visibility: visible; transform: translate(-50%, -105%); }
 
         .glass-panel {
             background: rgba(255, 255, 255, 0.85);
@@ -63,7 +57,6 @@
         }
         
         #map-svg {
-            transition: none;
             cursor: grab;
             touch-action: none;
             position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1;
@@ -72,8 +65,21 @@
             cursor: grabbing;
         }
 
-        .smooth-move {
-            transition: left 1s cubic-bezier(0.25, 1, 0.5, 1), top 1s cubic-bezier(0.25, 1, 0.5, 1);
+        /* SVG内の全アイコン共通の超滑らかな移動イージング設定 */
+        .svg-avatar-node, .svg-dept-node, .svg-branch-node {
+            transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* 外出しのHTMLツールチップをホバー時に美しく見せる */
+        .tooltip-box {
+            pointer-events: none;
+            opacity: 0;
+            transform: translate(-50%, -100%) scale(0.95);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .tooltip-box.show {
+            opacity: 1;
+            transform: translate(-50%, -115%) scale(1);
         }
     </style>
 </head>
@@ -81,6 +87,8 @@
     <div class="ocean-bg"></div>
 
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+    <div id="global-tooltip" class="tooltip-box fixed z-50 glass-panel border border-white text-slate-800 text-xs py-2.5 px-3.5 rounded-xl shadow-2xl w-52"></div>
 
     <header class="relative z-40 glass-panel px-4 py-2.5 md:px-6 md:py-3.5 flex items-center justify-between gap-2 shadow-md flex-shrink-0">
         <div class="flex items-center gap-2 md:gap-3 min-w-0">
@@ -184,18 +192,12 @@
                 <circle r="16" fill="#ffffff" stroke="#ef4444" stroke-width="2.5" class="shadow-md" />
                 <text y="4" text-anchor="middle" fill="#ef4444" font-size="15" font-weight="bold">🌺</text>
             </g>
+
+            <g id="svg-branch-layer"></g>
+            <g id="svg-dept-layer"></g>
+            <g id="svg-avatar-layer"></g>
         </svg>
-
-        <div id="avatar-container" class="absolute inset-0 w-full h-full pointer-events-none z-20"></div>
     </main>
-
-    <footer class="glass-panel border-t border-slate-200/60 px-6 py-2.5 flex justify-between items-center text-[11px] text-slate-600 shadow-sm relative z-30 hidden sm:flex flex-shrink-0">
-        <div class="font-bold">© 2026 Campaigns. All For One キャンペーン 実行委員会</div>
-        <div class="flex items-center gap-4 font-bold">
-            <span class="flex items-center gap-1.5"><span class="bg-cyan-500 text-white text-[9px] px-1 rounded shadow font-black">✨</span> メディカル 50%達成</span>
-            <span class="flex items-center gap-1.5"><span class="text-yellow-500 text-xs">👑</span> メディカル 100%達成</span>
-        </div>
-    </footer>
 
     <div id="drawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-[450px] bg-slate-50 border-l border-slate-200 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
         <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
@@ -262,7 +264,7 @@
             { id: "2003", name: "宮代", department: "2", role: "FA",  kp_june: 430000, kp_july: 400000, med_june: 4.0, med_july: 2.0, image_url: "" },
             { id: "2004", name: "松本", department: "2", role: "FA",  kp_june: 180000, kp_july: 200000, med_june: 0.5, med_july: 0.5, image_url: "" },
             { id: "2005", name: "酒井", department: "2", role: "FA",  kp_june: 415000, kp_july: 420000, med_june: 3.0, med_july: 4.0, image_url: "" },
-            { id: "2006", name: "色摩", department: "2", role: "FA",  kp_june: 310000, bg_july: 0, kp_july: 330000, med_june: 2.0, med_july: 1.5, image_url: "" },
+            { id: "2006", name: "色摩", department: "2", role: "FA",  kp_june: 310000, kp_july: 330000, med_june: 2.0, med_july: 1.5, image_url: "" },
             { id: "2007", name: "谷口", department: "2", role: "FA",  kp_june: 390000, kp_july: 400000, med_june: 2.5, med_july: 2.5, image_url: "" },
             { id: "2008", name: "小菅", department: "2", role: "FA",  kp_june: 220000, kp_july: 240000, med_june: 1.0, med_july: 1.0, image_url: "" },
 
@@ -277,7 +279,7 @@
 
         let members = [];
         let currentMode = 'june';
-        let isSmoothTransitionActive = false;
+        let isSmoothTransitionActive = true; // アニメーションをデフォルトで常時有効化
 
         let camX = 0; let camY = 0; let camW = 1200; let camH = 740;
         let isDragging = false; let dragStartX = 0; let dragStartY = 0;
@@ -287,6 +289,7 @@
             loadSavedData();
             lucide.createIcons();
             initManualCameraEvents();
+            applyCamera();
             renderMap();
             renderEditForm();
             updateSummaryStats();
@@ -306,7 +309,6 @@
             if (confirm('データを初期のデモデータにリセットしますか？')) {
                 members = JSON.parse(JSON.stringify(INITIAL_DEMO_DATA));
                 saveData(); 
-                isSmoothTransitionActive = false;
                 renderMap(); renderEditForm(); updateSummaryStats();
                 showToast('デモデータを読み込みました', 'info');
             }
@@ -325,9 +327,10 @@
                 if (medJulyInput) m.med_july = parseFloat(medJulyInput.value) || 0;
             });
             saveData(); 
-            triggerSmoothMove();
+            renderMap();
+            updateSummaryStats();
             toggleDrawer();
-            showToast('データを保存しました！⛵', 'success');
+            showToast('データを保存・マップへ反映しました！⛵', 'success');
         }
 
         function changeMode(mode) {
@@ -338,15 +341,9 @@
                     ? "px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 bg-gradient-to-r from-cyan-500 to-teal-500 text-white shadow"
                     : "px-2 py-1 md:px-4 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all duration-300 text-slate-600 hover:text-slate-900";
             });
-            triggerSmoothMove();
-            updateSummaryStats();
-            showToast(`${mode === 'june' ? '6月度' : mode === 'july' ? '7月度' : '連月トータル'}モードに切り替えました`, 'info');
-        }
-
-        function triggerSmoothMove() {
-            isSmoothTransitionActive = true;
             renderMap();
-            setTimeout(() => { isSmoothTransitionActive = false; renderMap(); }, 1000);
+            updateSummaryStats();
+            showToast(`${mode === 'june' ? '6月度' : mode === 'july' ? '7月度' : '連月トータル'}の数値を展開します`, 'info');
         }
 
         function getMemberTarget(member, mode = currentMode) {
@@ -386,35 +383,12 @@
             return (totalKP / deptTarget) * 100;
         }
 
-        function getPointOnPath(pathId, progressPct) {
+        // SVG内のPathからネイティブな内部XY座標を直接引っ張る（ズームバグの完全な根治治療）
+        function getRawPointOnPath(pathId, progressPct) {
             const path = document.getElementById(pathId);
             if (!path) return { x: 0, y: 0 };
             const totalLength = path.getTotalLength();
-            const pt = path.getPointAtLength(totalLength * (progressPct / 100));
-            return getPointOnPathDirect(pt.x, pt.y);
-        }
-
-        function getPointOnPathDirect(svgX, svgY) {
-            const svg = document.getElementById('map-svg');
-            if (!svg) return { x: 0, y: 0 };
-            const containerRect = svg.parentElement.getBoundingClientRect();
-            const scale = Math.max(containerRect.width / camW, containerRect.height / camH);
-            const offsetX = camX + (camW - containerRect.width / scale) / 2;
-            const offsetY = camY + (camH - containerRect.height / scale) / 2;
-            return {
-                x: containerRect.left + (svgX - offsetX) * scale,
-                y: containerRect.top + (svgY - offsetY) * scale
-            };
-        }
-
-        function getDynamicIconSize() {
-            const baseSize = 36; const zoomRatio = 1200 / camW; 
-            return Math.min(Math.max(baseSize * zoomRatio, baseSize), 120);
-        }
-
-        function applyCamera() {
-            const svg = document.getElementById('map-svg'); if (!svg) return;
-            svg.setAttribute('viewBox', `${camX} ${camY} ${camW} ${camH}`);
+            return path.getPointAtLength(totalLength * (progressPct / 100));
         }
 
         function toggleDeptPanelMobile() {
@@ -468,7 +442,7 @@
                     const newScale = Math.max(rect.width / camW, rect.height / camH);
                     camX = svgCenterX - centerX / newScale - (camW - rect.width / newScale) / 2;
                     camY = svgCenterY - centerY / newScale - (camH - rect.height / newScale) / 2;
-                    applyCamera(); renderAllElements(); return;
+                    applyCamera(); return;
                 }
                 if (!isDragging) return;
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -476,7 +450,7 @@
                 const scale = Math.max(rect.width / camW, rect.height / camH);
                 camX -= (clientX - dragStartX) / scale; camY -= (clientY - dragStartY) / scale;
                 dragStartX = clientX; dragStartY = clientY;
-                applyCamera(); renderAllElements();
+                applyCamera();
             };
             svg.addEventListener('mousedown', startDrag);
             window.addEventListener('mousemove', doDrag);
@@ -486,60 +460,160 @@
             window.addEventListener('touchend', () => { isDragging = false; startTouchDistance = 0; });
         }
 
+        // 重なりまくるアバターを綺麗に散らすための「花びら等間隔分散ロジック」
+        function getSpreadOffset(index, total) {
+            if (total <= 1) return { dx: 0, dy: 0 };
+            const radius = 24; // 分散させる半径の幅
+            const angle = (index * (2 * Math.PI / total)) + (index * 0.2); // 重なり防止の微小な回転
+            return {
+                dx: Math.cos(angle) * radius,
+                dy: Math.sin(angle) * radius
+            };
+        }
+
+        // 外出しHTMLカスタムツールチップの制御
+        function showSvgTooltip(e, contentHtml) {
+            const tip = document.getElementById('global-tooltip');
+            tip.innerHTML = contentHtml;
+            tip.style.left = `${e.clientX}px`;
+            tip.style.top = `${e.clientY}px`;
+            tip.classList.add('show');
+        }
+        function hideSvgTooltip() {
+            document.getElementById('global-tooltip').classList.remove('show');
+        }
+
         function renderAllElements() {
-            const container = document.getElementById('avatar-container'); if (!container) return;
-            const currentNodes = Array.from(container.children); const activeIds = new Set();
-            const gridContainer = document.getElementById('resort-avatars-grid'); if (gridContainer) gridContainer.innerHTML = '';
-            const dynamicSize = getDynamicIconSize();
+            const branchLayer = document.getElementById('svg-branch-layer');
+            const deptLayer = document.getElementById('svg-dept-layer');
+            const avatarLayer = document.getElementById('svg-avatar-layer');
+            const resortGrid = document.getElementById('resort-avatars-grid');
+            
+            if (!branchLayer || !deptLayer || !avatarLayer) return;
+            if (resortGrid) resortGrid.innerHTML = '';
 
+            // 1. 支社全体の飛行機配置（SVG直下）
             const branchRawPct = Math.min(getBranchProgress(), 100);
-            const branchPoint = getPointOnPath('path-branch', branchRawPct);
-            updateOrCreateElement(container, 'branch_global', branchPoint.x, branchPoint.y, () => {
-                const size = dynamicSize * 2.2; 
-                return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-2xl bg-white shadow-2xl border-2 border-cyan-300 flex items-center justify-center p-1"><svg viewBox="0 0 100 100" class="w-[90%] h-[90%] drop-shadow-md" style="transform: rotate(225deg);"><path d="M50,5 C52,25 55,40 88,58 L88,64 L54,54 L53,82 L66,92 L66,96 L50,91 L34,96 L34,92 L47,82 L46,54 L12,64 L12,58 C45,40 48,25 50,5 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.8"/><path d="M50,5 C51,25 53,40 88,58 L88,60 L52,54 Z" fill="#0ea5e9"/></svg><span style="font-size: ${Math.max(size*0.1, 9)}px;" class="absolute -top-2.5 left-1/2 transform -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-cyan-600 text-white font-black border border-white shadow whitespace-nowrap">支社全体航空</span></div>`;
-            }, 'z-25 float-animation');
-            activeIds.add('branch_global');
+            const branchPt = getRawPointOnPath('path-branch', branchRawPct);
+            branchLayer.innerHTML = `
+                <g class="svg-branch-node float-animation" style="transform: translate(${branchPt.x}px, ${branchPt.y}px);"
+                   onmousemove="showSvgTooltip(event, '<p class=\'font-black text-cyan-600\'>支社全体進捗: ${getBranchProgress().toFixed(1)}%</p>')" onmouseleave="hideSvgTooltip()">
+                    <rect x="-35" y="-35" width="70" height="70" rx="14" fill="#ffffff" stroke="#0ea5e9" stroke-width="2.5" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))"/>
+                    <g transform="translate(0, 5) scale(0.65) rotate(225)">
+                        <path d="M50,5 C52,25 55,40 88,58 L88,64 L54,54 L53,82 L66,92 L66,96 L50,91 L34,96 L34,92 L47,82 L46,54 L12,64 L12,58 C45,40 48,25 50,5 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="0.8"/>
+                        <path d="M50,5 C51,25 53,40 88,58 L88,60 L52,54 Z" fill="#0ea5e9"/>
+                    </g>
+                    <rect x="-30" y="-45" width="60" height="15" rx="6" fill="#0ea5e9"/>
+                    <text y="-35" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="900">支社全体航空</text>
+                </g>`;
 
-            ["1", "2", "4", "5"].forEach((dNum) => {
-                const deptRawPct = Math.min(getDeptProgress(dNum), 100);
-                const deptPoint = getPointOnPath('path-dept', deptRawPct);
-                updateOrCreateElement(container, `dept_${dNum}`, deptPoint.x, deptPoint.y, () => {
-                    const sailColors = { "1": ["#fb923c", "#ea580c"], "2": ["#22d3ee", "#0284c7"], "4": ["#34d399", "#059669"], "5": ["#f472b6", "#db2777"] };
-                    const colors = sailColors[dNum] || ["#94a3b8", "#475569"]; const size = dynamicSize * 1.8;
-                    return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-full bg-white shadow-2xl border-2 border-slate-200 flex items-center justify-center"><svg viewBox="0 0 64 64" class="w-[85%] h-[85%]"><defs><linearGradient id="sGrad-${dNum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${colors[0]}"/><stop offset="100%" stop-color="${colors[1]}"/></linearGradient></defs><line x1="32" y1="6" x2="32" y2="46" stroke="#475569" stroke-width="2.5"/><path d="M34,8 C40,18 48,32 52,42 L32,43 Z" fill="url(#sGrad-${dNum})" /><path d="M30,12 C24,20 18,32 14,42 L32,42 Z" fill="#e2e8f0" /><path d="M10,44 C20,44 44,44 54,44 C50,50 42,54 32,54 C22,54 14,50 10,44 Z" fill="#1e293b" /></svg><span style="width: ${size*0.35}px; height: ${size*0.35}px; font-size: ${size*0.18}px;" class="absolute -top-1 -right-1 rounded-full bg-slate-800 text-white font-black flex items-center justify-center border-2 border-white shadow-md">${dNum}課</span></div>`;
-                }, 'z-20');
-                activeIds.add(`dept_${dNum}`);
+            // 2. 各課ヨットの配置（SVG直下、同じ座標なら少し散らす）
+            const depts = ["1", "2", "4", "5"];
+            const deptPointsMap = {};
+            depts.forEach(dNum => {
+                const pct = Math.min(getDeptProgress(dNum), 100).toFixed(1);
+                if (!deptPointsMap[pct]) deptPointsMap[pct] = [];
+                deptPointsMap[pct].push(dNum);
             });
 
+            let deptHtml = '';
+            for (const pct in deptPointsMap) {
+                const arr = deptPointsMap[pct];
+                arr.forEach((dNum, idx) => {
+                    const deptRawPct = Math.min(getDeptProgress(dNum), 100);
+                    const pt = getRawPointOnPath('path-dept', deptRawPct);
+                    const offset = getSpreadOffset(idx, arr.length);
+                    const finalX = pt.x + offset.dx * 0.8;
+                    const finalY = pt.y + offset.dy * 0.8;
+
+                    const sailColors = { "1": ["#fb923c", "#ea580c"], "2": ["#22d3ee", "#0284c7"], "4": ["#34d399", "#059669"], "5": ["#f472b6", "#db2777"] };
+                    const colors = sailColors[dNum] || ["#94a3b8", "#475569"];
+
+                    deptHtml += `
+                        <g class="svg-dept-node" style="transform: translate(${finalX}px, ${finalY}px);"
+                           onmousemove="showSvgTooltip(event, '<p class=\'font-black text-slate-800\'>第 ${dNum} 営業課: ${getDeptProgress(dNum).toFixed(1)}%</p>')" onmouseleave="hideSvgTooltip()">
+                            <circle r="24" fill="#ffffff" stroke="#cbd5e1" stroke-width="2" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.12))"/>
+                            <g transform="translate(-20, -22) scale(0.65)">
+                                <line x1="32" y1="6" x2="32" y2="46" stroke="#475569" stroke-width="2.5"/>
+                                <path d="M34,8 C40,18 48,32 52,42 L32,43 Z" fill="linear-gradient" />
+                                <path d="M34,8 C40,18 48,32 52,42 L32,43 Z" fill="${colors[1]}" />
+                                <path d="M30,12 C24,20 18,32 14,42 L32,42 Z" fill="#e2e8f0" />
+                                <path d="M10,44 C20,44 44,44 54,44 C50,50 42,54 32,54 C22,54 14,50 10,44 Z" fill="#1e293b" />
+                            </g>
+                            <circle cx="16" cy="-16" r="10" fill="#1e293b" stroke="#ffffff" stroke-width="1.5"/>
+                            <text x="16" y="-13" text-anchor="middle" fill="#ffffff" font-size="9" font-weight="900">${dNum}課</text>
+                        </g>`;
+                });
+            }
+            deptLayer.innerHTML = deptHtml;
+
+            // 3. 個人アバターの配置（同じ進捗率のメンバーを綺麗に散らす）
+            const progressGroups = {};
             members.forEach(m => {
                 const rawPct = getMemberProgress(m);
                 const modeMed = currentMode === 'june' ? m.med_june : currentMode === 'july' ? m.med_july : (m.med_june + m.med_july);
                 const medTarget = MEDICAL_TARGETS[currentMode];
+
                 if (rawPct >= 100 && modeMed >= medTarget) {
                     renderResortGridAvatar(m);
                 } else {
-                    const pt = getPointOnPath('path-personal', rawPct);
-                    updateOrCreateElement(container, `member_${m.id}`, pt.x, pt.y, () => {
-                        const deptColors = { "1": "from-orange-400 to-rose-500", "2": "from-cyan-400 to-blue-500", "4": "from-emerald-400 to-teal-500", "5": "from-pink-400 to-purple-500" };
-                        const medLevel = getMedicalLevel(m); let ringClass = ''; let statusBadge = ''; const size = dynamicSize;
-                        if (medLevel === 3) { ringClass = 'ring-spin-gold'; statusBadge = `<div class="absolute left-0 right-0 flex justify-center select-none pointer-events-none z-30" style="top: -${size*0.3}px; font-size: ${size*0.4}px;">👑</div>`; }
-                        else if (medLevel === 2) { ringClass = 'ring-spin-cyan'; statusBadge = `<div class="absolute flex justify-center select-none pointer-events-none z-30" style="top: -${size*0.1}px; right: -${size*0.1}px;"><span style="font-size: ${size*0.25}px;" class="bg-cyan-500 text-white font-black rounded shadow border border-white">✨</span></div>`; }
-                        let avatarContent = m.image_url ? `<img src="${m.image_url}" class="w-full h-full object-cover rounded-full">` : `<div style="font-size: ${size*0.32}px" class="w-full h-full bg-gradient-to-tr ${deptColors[m.department] || 'from-slate-400 to-slate-500'} rounded-full flex items-center justify-center font-black text-white">${m.name.substring(0, 2)}</div>`;
-                        return `<div style="width: ${size}px; height: ${size}px;" class="relative rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md ${ringClass}">${avatarContent}${statusBadge}</div>`;
-                    }, 'z-10');
-                    activeIds.add(`member_${m.id}`);
+                    const key = rawPct.toFixed(1);
+                    if (!progressGroups[key]) progressGroups[key] = [];
+                    progressGroups[key].push(m);
                 }
             });
 
-            currentNodes.forEach(node => { if (!activeIds.has(node.id)) node.remove(); });
-        }
+            let avatarHtml = '';
+            for (const key in progressGroups) {
+                const group = progressGroups[key];
+                group.forEach((m, index) => {
+                    const rawPct = getMemberProgress(m);
+                    const pt = getRawPointOnPath('path-personal', rawPct);
+                    
+                    // 重なり対応：同じマスに留まるメンバーを円状にフワッと逃がす
+                    const offset = getSpreadOffset(index, group.length);
+                    const finalX = pt.x + offset.dx;
+                    const finalY = pt.y + offset.dy;
 
-        function updateOrCreateElement(container, id, x, y, htmlContentFunc, extraClasses = '') {
-            let el = document.getElementById(id);
-            if (!el) { el = document.createElement('div'); el.id = id; container.appendChild(el); }
-            el.className = `absolute pointer-events-auto cursor-pointer tooltip-trigger ${extraClasses} ${isSmoothTransitionActive ? 'smooth-move' : ''}`;
-            el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.transform = 'translate(-50%, -50%)';
-            el.innerHTML = htmlContentFunc();
+                    const deptColors = { "1": "#f97316", "2": "#06b6d4", "4": "#10b981", "5": "#ec4899" };
+                    const medLevel = getMedicalLevel(m);
+                    
+                    let borderStroke = "#ffffff";
+                    let borderW = "2";
+                    let crownHtml = '';
+
+                    if (medLevel === 3) {
+                        borderStroke = "#eab308"; borderW = "3";
+                        crownHtml = `<text y="-18" text-anchor="middle" font-size="16">👑</text>`;
+                    } else if (medLevel === 2) {
+                        borderStroke = "#06b6d4"; borderW = "3";
+                        crownHtml = `<text x="14" y="-12" text-anchor="middle" font-size="10">✨</text>`;
+                    }
+
+                    const modeKP = currentMode === 'june' ? m.kp_june : currentMode === 'july' ? m.kp_july : (m.kp_june + m.kp_july);
+                    const modeMed = currentMode === 'june' ? m.med_june : currentMode === 'july' ? m.med_july : (m.med_june + m.med_july);
+
+                    const tooltipHtml = `
+                        <div class=\'flex items-center justify-between border-b border-slate-200 pb-1 mb-1\'>
+                            <span class=\'font-black text-slate-900\'>${m.name}</span>
+                            <span class=\'text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-bold\'>${m.department}課</span>
+                        </div>
+                        <div class=\'space-y-0.5 text-[11px] font-bold text-slate-700\'>
+                            <div class=\'flex justify-between\'><span>KP進捗:</span><span class=\'text-orange-500 font-black\'>${rawPct.toFixed(1)}%</span></div>
+                            <div class=\'flex justify-between\'><span>KP実績:</span><span>${modeKP.toLocaleString()} Pt</span></div>
+                            <div class=\'flex justify-between\'><span>医療件数:</span><span>${modeMed} 件</span></div>
+                        </div>`;
+
+                    avatarHtml += `
+                        <g class="svg-avatar-node" style="transform: translate(${finalX}px, ${finalY}px);"
+                           onmousemove="showSvgTooltip(event, \`${tooltipHtml}\`)" onmouseleave="hideSvgTooltip()">
+                            <circle r="16" fill="${deptColors[m.department] || '#94a3b8'}" stroke="${borderStroke}" stroke-width="${borderW}" filter="drop-shadow(0 4px 5px rgba(0,0,0,0.15))"/>
+                            <text y="4" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="900" tracking-tighter>${m.name.substring(0,2)}</text>
+                            ${crownHtml}
+                        </g>`;
+                });
+            }
+            avatarLayer.innerHTML = avatarHtml;
         }
 
         function renderResortGridAvatar(m) {
@@ -547,14 +621,34 @@
             const medLevel = getMedicalLevel(m); let ringClass = ''; let statusBadge = ''; const size = 32;
             if (medLevel === 3) ringClass = 'ring-spin-gold'; else if (medLevel === 2) ringClass = 'ring-spin-cyan';
             let avatarContent = m.image_url ? `<img src="${m.image_url}" class="w-full h-full object-cover rounded-full">` : `<div style="font-size: ${size*0.32}px" class="w-full h-full bg-gradient-to-tr ${deptColors[m.department] || 'from-slate-400 to-slate-500'} rounded-full flex items-center justify-center font-black text-white">${m.name.substring(0, 2)}</div>`;
+            
+            const modeKP = currentMode === 'june' ? m.kp_june : currentMode === 'july' ? m.kp_july : (m.kp_june + m.kp_july);
+            const modeMed = currentMode === 'june' ? m.med_june : currentMode === 'july' ? m.med_july : (m.med_june + m.med_july);
+            
             const wrapper = document.createElement('div');
-            wrapper.className = 'relative w-9 h-9 flex items-center justify-center pointer-events-auto mx-auto';
-            wrapper.innerHTML = `<div class="relative w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md ${ringClass}">${avatarContent}</div>`;
+            wrapper.className = 'relative w-9 h-9 flex items-center justify-center pointer-events-auto mx-auto tooltip-trigger';
+            wrapper.innerHTML = `
+                <div class="relative w-8 h-8 rounded-full border-2 border-white bg-white flex items-center justify-center shadow-md ${ringClass}">${avatarContent}</div>
+                <div class="tooltip-content absolute left-1/2 bottom-full mb-3 transform -translate-x-1/2 glass-panel border border-white text-slate-800 text-xs py-2.5 px-3.5 rounded-xl opacity-0 invisible transition-all duration-200 shadow-2xl pointer-events-none w-52 z-50">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-1.5">
+                        <span class="font-extrabold text-slate-900">${m.name}</span>
+                        <span class="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">達成者</span>
+                    </div>
+                    <div class="space-y-1 text-[11px] font-bold text-slate-700">
+                        <div class="flex justify-between"><span>進捗率:</span><span class="text-emerald-500 font-black">100% OVER</span></div>
+                        <div class="flex justify-between"><span>KP実績:</span><span>${modeKP.toLocaleString()} Pt</span></div>
+                        <div class="flex justify-between border-t border-slate-100 pt-1 mt-1"><span>メディカル:</span><span>${modeMed} 件</span></div>
+                    </div>
+                </div>`;
             const grid = document.getElementById('resort-avatars-grid'); if (grid) grid.appendChild(wrapper);
         }
 
         function renderMap() { renderAllElements(); }
-        function startCampaignAnimation() { showToast('進捗状況の同期を開始します... 🌺', 'success'); triggerSmoothMove(); }
+        
+        function startCampaignAnimation() { 
+            showToast('進捗状況のシームレス同期を開始します... 🌺', 'success'); 
+            renderMap(); 
+        }
 
         function updateSummaryStats() {
             const branchProgress = getBranchProgress();
@@ -587,7 +681,7 @@
             reader.onload = function(e) {
                 try {
                     const parsedData = parseCSV(e.target.result);
-                    if (parsedData && parsedData.length > 0) { members = parsedData; saveData(); isSmoothTransitionActive = false; renderMap(); renderEditForm(); updateSummaryStats(); showToast('CSVデータを正常にインポートしました 🌴', 'success'); }
+                    if (parsedData && parsedData.length > 0) { members = parsedData; saveData(); renderMap(); renderEditForm(); updateSummaryStats(); showToast('CSVデータを正常にインポートしました 🌴', 'success'); }
                 } catch (err) { showToast(`エラー: ${err.message}`, 'error'); }
             };
             reader.readAsText(file, 'UTF-8'); event.target.value = '';
